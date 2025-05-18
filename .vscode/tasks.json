@@ -1,0 +1,31 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build",
+            "type": "shell",
+            "command": "nasm -f bin src/boot.asm -o bin/boot.bin",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Start in QEMU",
+            "type": "shell",
+            "command": "qemu-system-x86_64 -drive file=bin/boot.bin,format=raw",
+            "isBackground": true,
+            "dependsOn": "build",
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^$",
+                    "endsPattern": "^$"
+                }
+            }
+        }
+    ]
+}

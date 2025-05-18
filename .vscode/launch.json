@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Bootloader with QEMU/GDB",
+            "type": "gdb",
+            "request": "attach",
+            "executable": "/home/tristan/projects/os-dev/boot.bin",
+            "target": ":1234",
+            "remote": true,
+            "cwd": "${workspaceRoot}",
+            "valuesFormatting": "parseText",
+            "preLaunchTask": "Start in QEMU"
+        }
+    ]
+}
