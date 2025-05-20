@@ -7,8 +7,9 @@ hex     db  "0123456789ABCDEF"	; Characters to print hex values
 
 section .text
 start:
+	mov esp, 0x7C00 + 512	; Set a reasonable stack pointer
 	call clearScreen	; Clear the screen
-	mov ecx, hex		; Load address of the data area
+	mov ecx, msg2		; Load address of the data area
 	jmp printHex		; Jump to print function
 
 clearScreen:
@@ -28,21 +29,12 @@ clearScreen:
 printHex:
 	mov	ah, 0x0e	; tty mode
 	mov	edx, [ecx]	; Load current value
-	and	edx, 0xFF	; Mask to the byte
 
 	ror	edx, 4		; Rotate right to get the high nibble
-	mov	ebx, edx	; Load the character for the high nibble
-	and	ebx, 0x0F	; Mask to get the low nibble
-	add 	ebx, hex	; Add offset to get the character
-	mov	al, [ebx]	; Load the character for the high nibble
-	int	0x10		; Print character
+	call	printHexChar	; Print high nibble as 0-F
 	
 	rol 	edx, 4		; Rotate left to get the low nibble
-	mov	ebx, edx	; Load the character for the low nibble
-	and	ebx, 0x0F	; Mask to get the low nibble
-	add 	ebx, hex	; Add offset to get the character
-	mov	al, [ebx]	; Load the character for the low nibble
-	int	0x10		; Print character
+	call	printHexChar	; Print low nibble as 0-F
 
 	mov	al, ' '		; Add a space between characters
 	int	0x10		; Print character
@@ -52,7 +44,15 @@ printHex:
 	jnz	printHex	; If not zero, continue printing
 
 	hlt			; Halt the CPU
-	jmp 	$		; If the previous failed, start an infinite loop
+	jmp 	$		; If anything causes a wake, start an infinite loop
+
+printHexChar:
+	mov	ebx, edx	; Copy the entire value
+	and	ebx, 0x0F	; Mask to get the low nibble
+	add 	ebx, hex	; Add offset to get the character
+	mov	al, [ebx]	; Load the character for the low nibble
+	int	0x10		; Print character
+	ret
 
 ; Zeros up to byte 510
 times 510 - ($ - $$) db 0
