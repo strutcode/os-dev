@@ -3,14 +3,18 @@
 jmp start			; Jump to start of code
 
 section .text
-hex     db  "0123456789ABCDEF"	; Characters to print hex values
+hex     db "0123456789ABCDEF"	; Characters to print hex values
+err	db "Error!",0x0a,0x0d,0	; Error message with new line
+reg	db 0
 
 section .text
 start:
-	mov esp, 0x7C00 + 512	; Set a reasonable stack pointer
 	call clearScreen	; Clear the screen
-	mov ecx, msg2		; Load address of the data area
+	call loadData		; Load remaining binary to memory
+	mov ecx, 0x7C00+512	; Load address of the data area
+	mov esi, 0xFF		; Set the number of bytes to print
 	jmp printHex		; Jump to print function
+	jmp $
 
 clearScreen:
 	mov	ah, 0x06	; Scroll up window
@@ -25,7 +29,58 @@ clearScreen:
 	mov	dl, 0x00	; Column (0)
 	int	0x10		; BIOS interrupt to set cursor position
 	ret
+
+loadData:
+	mov	ah, 0x00	; Reset disks
+	mov	dl, 0x80	; Include hard disks
+	int	0x13		; BIOS interrupt to reset disk
 	
+	mov	ah, 0x02	; BIOS read sectors
+	mov	al, 0x01	; Number of sectors to read
+	mov	dl, 0x80	; Disk (bit 7) drive (0)
+	mov	dh, 0x00	; Head (0)
+	mov	cx, 0x00	; Cylinder (0)
+	mov	bx, 0x7C00+512	; Load address
+	int	0x13		; BIOS interrupt to read disk
+
+	jc	onError		; Check for error (carry flag set)
+	ret
+
+onError:
+	; Move all registers to memory
+	mov	[reg + 0x00], eax
+	mov	[reg + 0x04], ebx
+	mov	[reg + 0x08], ecx
+	mov	[reg + 0x0C], edx
+	mov	[reg + 0x10], esi
+	mov	[reg + 0x14], edi
+	mov	[reg + 0x18], esp
+	mov	[reg + 0x1C], ebp
+
+	mov	ecx, err	; Load error message
+	call	printAscii	; Print error message
+
+	mov 	ecx, reg	; Set the starting address
+
+	printRegister:
+	mov 	esi, 0x04	; Set the number of bytes to print
+	call	printHex	; Print registers in hex
+	
+	cmp	ecx, reg + 0x1C	; Check if all registers are printed
+	jne	printRegister	; If not, continue printing
+
+	jmp	$		; Infinite loop
+	
+printAscii:
+	mov	ah, 0x0e	; TTY mode
+	mov	al, [ecx]	; Load the character
+	int	0x10		; Print character
+	inc	ecx		; Move to next character
+	cmp     BYTE [ecx], 0	; Check if the next byte is zero
+	jnz	printAscii	; If not zero, continue printing
+	
+	ret
+
 printHex:
 	mov	ah, 0x0e	; tty mode
 	mov	edx, [ecx]	; Load current value
@@ -40,11 +95,15 @@ printHex:
 	int	0x10		; Print character
 
 	inc	ecx		; Move to next byte
-	cmp     BYTE [ecx], 0	; Check if the next byte is zero
+	dec	esi		; Decrement length
 	jnz	printHex	; If not zero, continue printing
 
-	hlt			; Halt the CPU
-	jmp 	$		; If anything causes a wake, start an infinite loop
+	mov	al, 0x0a	; New line
+	int	0x10		; Print
+	mov	al, 0x0d	; Carriage return
+	int	0x10		; Print 
+
+	ret
 
 printHexChar:
 	mov	ebx, edx	; Copy the entire value
