@@ -12,8 +12,7 @@ start:
 	call clearScreen	; Clear the screen
 	call loadData		; Load remaining binary to memory
 	mov ecx, 0x7C00+512	; Load address of the data area
-	mov esi, 0xFF		; Set the number of bytes to print
-	jmp printHex		; Jump to print function
+	jmp printAscii		; Jump to print function
 	jmp $
 
 clearScreen:
@@ -39,7 +38,8 @@ loadData:
 	mov	al, 0x01	; Number of sectors to read
 	mov	dl, 0x80	; Disk (bit 7) drive (0)
 	mov	dh, 0x00	; Head (0)
-	mov	cx, 0x00	; Cylinder (0)
+	mov	ch, 0x00	; Cylinder (0)
+	mov	cl, 0x02	; Sector (2)
 	mov	bx, 0x7C00+512	; Load address
 	int	0x13		; BIOS interrupt to read disk
 
